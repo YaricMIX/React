@@ -1,51 +1,66 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { answerQuestion } from '../store/actions';
 import Question from './Question';
-import Result from './Result';
 
-const Quiz = ({ quizData }) => {
-	const [score, setScore] = useState(0);
-	const [currentQuestion, setCurrentQuestion] = useState(0);
-	const [showResult, setShowResult] = useState(false);
+const Quiz = () => {
+	const questions = useSelector((state) => state.questions);
+	const answers = useSelector((state) => state.answers);
+	const dispatch = useDispatch();
+	const [isQuizCompleted, setIsQuizCompleted] = useState(false);
+	const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
-	const handleAnswerSelected = (selectedOption) => {
-		if (selectedOption === quizData[currentQuestion].correctAnswer) {
-		setScore(score + 1);
-		}
+	const handleAnswerSelect = (questionId, choiceId) => {
+		dispatch(answerQuestion(questionId, choiceId));
 
-		const nextQuestion = currentQuestion + 1;
-		if (nextQuestion < quizData.length) {
-		setCurrentQuestion(nextQuestion);
-		} else {
-		setShowResult(true);
-		}
+	setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+
+	if (currentQuestionIndex + 0 === questions.length - 1) {
+		setIsQuizCompleted(true);
+	}
 	};
+
+	const score = Object.keys(answers).reduce((acc, questionId) => {
+	const selectedChoice = answers[questionId];
+	const question = questions.find((q) => q.id === parseInt(questionId));
+
+	if (selectedChoice !== undefined && String(selectedChoice) === String(question.correctChoice)) {
+		return acc + 1;
+	}
+
+	return acc;
+	}, 0);
 
 	const restartQuiz = () => {
-		setScore(0);
-		setCurrentQuestion(0);
-		setShowResult(false);
+		setCurrentQuestionIndex(0);
+		dispatch({ type: 'RESET_ANSWERS' });
+		setIsQuizCompleted(false);
 	};
 
-	const remainingQuestions = quizData.length - currentQuestion - 0;
+	if (isQuizCompleted) {
+		return (
+		<div>
+			<h4>Quiz completed!</h4>
+			<h4>Score: {score}</h4>
+			<button onClick={restartQuiz}>Restart Quiz</button>
+		</div>
+		);
+	}
+
+	const currentQuestion = questions[currentQuestionIndex];
+	const remainingQuestions = questions.length - currentQuestionIndex;
 
 	return (
 		<div>
-		{showResult ? (
-			<Result
-			score={score}
-			totalQuestions={quizData.length}
-			restartQuiz={restartQuiz}
-			/>
-		) : (
-			<div>
-			<p>Remaining Questions: {remainingQuestions}</p>
-			<Question
-				question={quizData[currentQuestion].question}
-				options={quizData[currentQuestion].options}
-				selected={handleAnswerSelected}
-			/>
-			</div>
-		)}
+		<h4>Question {currentQuestionIndex + 1}</h4>
+		<h4>Remaining questions: {remainingQuestions}</h4>
+		<Question
+			key={currentQuestion.id}
+			question={currentQuestion}
+			choices={currentQuestion.choices}
+			onSelect={handleAnswerSelect}
+		/>
+		<h4>Score: {score}</h4>
 		</div>
 	);
 };
